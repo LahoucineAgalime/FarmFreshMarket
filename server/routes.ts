@@ -4,10 +4,81 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertProductSchema, insertCartItemSchema, insertOrderSchema, insertOrderItemSchema } from "@shared/schema";
 import { z } from "zod";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+
+  // Create test users if they don't exist
+  // Hash password helper function
+  const hashPassword = async (password: string) => {
+    const salt = randomBytes(16).toString("hex");
+    const buf = (await promisify(scrypt)(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
+  };
+
+  // Create wholesaler test user
+  const testWholesaler = await storage.getUserByUsername("wholesaler");
+  if (!testWholesaler) {
+    const hashedPassword = await hashPassword("password123");
+    
+    await storage.createUser({
+      username: "wholesaler",
+      password: hashedPassword,
+      name: "Test Wholesaler",
+      email: "wholesaler@example.com",
+      role: "wholesaler",
+      address: "456 Market St",
+      phone: "555-1234"
+    });
+    
+    console.log("Created test wholesaler: wholesaler / password123");
+  }
+  
+  // Create farmer test user
+  const testFarmer = await storage.getUserByUsername("farmer");
+  if (!testFarmer) {
+    const hashedPassword = await hashPassword("password123");
+    
+    const farmer = await storage.createUser({
+      username: "farmer",
+      password: hashedPassword,
+      name: "Test Farmer",
+      email: "farmer@example.com",
+      role: "farmer",
+      address: "789 Farm Rd",
+      phone: "555-5678"
+    });
+    
+    // Add some sample products for the farmer
+    await storage.createProduct({
+      name: "Organic Apples",
+      description: "Fresh organic apples harvested yesterday",
+      price: 2.99,
+      quantity: 100,
+      category: "fruits",
+      unit: "kg",
+      sellerId: farmer.id,
+      imageUrl: "https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60",
+      isAvailable: true
+    });
+    
+    await storage.createProduct({
+      name: "Fresh Carrots",
+      description: "Locally grown carrots, perfect for salads and cooking",
+      price: 1.99,
+      quantity: 50,
+      category: "vegetables",
+      unit: "kg",
+      sellerId: farmer.id,
+      imageUrl: "https://images.unsplash.com/photo-1590868309235-58c33a8f7d5b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60",
+      isAvailable: true
+    });
+    
+    console.log("Created test farmer: farmer / password123 with sample products");
+  }
 
   // Product routes
   app.get("/api/products", async (req, res) => {
