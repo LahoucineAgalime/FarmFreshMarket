@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Analytics - HarvestDirect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+        }
+        .card-stats {
+            border-left: 4px solid;
+        }
+        .card-stats-sales {
+            border-left-color: #0d6efd;
+        }
+        .card-stats-orders {
+            border-left-color: #198754;
+        }
+        .card-stats-products {
+            border-left-color: #6f42c1;
+        }
+        .card-stats-customers {
+            border-left-color: #fd7e14;
+        }
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">HarvestDirect</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/products">Products</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span sec:authentication="name">Username</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form th:action="@{/auth/logout}" method="post">
+                                    <button class="dropdown-item" type="submit">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/products/add">
+                                <i class="bi bi-plus-circle me-2"></i> Add Product
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/products/manage">
+                                <i class="bi bi-box me-2"></i> Manage Products
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/orders">
+                                <i class="bi bi-cart me-2"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/analytics">
+                                <i class="bi bi-graph-up me-2"></i> Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/settings">
+                                <i class="bi bi-gear me-2"></i> Settings
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Sales Analytics</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <a th:href="@{/analytics/export(startDate=${startDate},endDate=${endDate},format='csv')}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i> Export CSV
+                            </a>
+                            <a th:href="@{/analytics/export(startDate=${startDate},endDate=${endDate},format='pdf')}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-file-pdf me-1"></i> Export PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Range Selection -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form th:action="@{/analytics}" method="get" class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="startDate" name="startDate" th:value="${startDate}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="endDate" name="endDate" th:value="${endDate}">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-filter me-1"></i> Apply Filter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card card-stats card-stats-sales">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Total Sales</h5>
+                                        <h2 class="fw-bold mb-2" th:text="${'$' + totalSales}">$0.00</h2>
+                                        <p class="mb-0 text-muted">
+                                            <span th:text="${#temporals.format(startDate, 'MMM dd')} + ' - ' + ${#temporals.format(endDate, 'MMM dd, yyyy')}">
+                                                Date Range
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box bg-primary-subtle text-primary">
+                                            <i class="bi bi-currency-dollar"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card card-stats card-stats-orders">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Total Orders</h5>
+                                        <h2 class="fw-bold mb-2">
+                                            <span th:with="total = ${orderStatusData.statusCounts.values().stream().reduce(0, (a, b) -> a + b)}"
+                                                  th:text="${total}">0</span>
+                                        </h2>
+                                        <p class="mb-0 text-muted">
+                                            <span th:text="${#temporals.format(startDate, 'MMM dd')} + ' - ' + ${#temporals.format(endDate, 'MMM dd, yyyy')}">
+                                                Date Range
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box bg-success-subtle text-success">
+                                            <i class="bi bi-cart"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card card-stats card-stats-products">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Products Sold</h5>
+                                        <h2 class="fw-bold mb-2">
+                                            <span th:with="total = ${topProducts.products.stream().map(p -> p.get('quantitySold')).reduce(0, (a, b) -> a + b)}"
+                                                  th:text="${total}">0</span>
+                                        </h2>
+                                        <p class="mb-0 text-muted">
+                                            <span th:text="${#temporals.format(startDate, 'MMM dd')} + ' - ' + ${#temporals.format(endDate, 'MMM dd, yyyy')}">
+                                                Date Range
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box" style="background-color: #f3effd; color: #6f42c1;">
+                                            <i class="bi bi-box"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="card card-stats card-stats-customers">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Completion Rate</h5>
+                                        <h2 class="fw-bold mb-2">
+                                            <span th:with="delivered = ${orderStatusData.statusCounts.get('DELIVERED') ?: 0},
+                                                          total = ${orderStatusData.statusCounts.values().stream().reduce(0, (a, b) -> a + b)}"
+                                                  th:text="${total > 0 ? #numbers.formatPercent(delivered / total, 1, 0) : '0%'}">0%</span>
+                                        </h2>
+                                        <p class="mb-0 text-muted">
+                                            <span th:text="${#temporals.format(startDate, 'MMM dd')} + ' - ' + ${#temporals.format(endDate, 'MMM dd, yyyy')}">
+                                                Date Range
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box bg-warning-subtle text-warning" style="background-color: #fff8ec; color: #fd7e14;">
+                                            <i class="bi bi-check-circle"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Charts -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-8">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Sales Over Time</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="salesChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Sales by Category</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="categoryChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Status & Top Products -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Order Status</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="orderStatusChart" height="260"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Top Selling Products</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Product</th>
+                                                <th>Category</th>
+                                                <th>Quantity Sold</th>
+                                                <th>Revenue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="productData, stat : ${topProducts.products}">
+                                                <td th:text="${stat.index + 1}">1</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img th:if="${productData.product.imageUrl}" th:src="${productData.product.imageUrl}" 
+                                                             class="me-2" alt="Product" width="40" height="40" style="object-fit: cover;">
+                                                        <span th:text="${productData.product.name}">Product Name</span>
+                                                    </div>
+                                                </td>
+                                                <td th:text="${productData.product.category}">Category</td>
+                                                <td th:text="${productData.quantitySold + ' ' + productData.product.unit}">0</td>
+                                                <td th:text="${'$' + productData.revenue}">$0.00</td>
+                                            </tr>
+                                            <tr th:if="${topProducts.products.empty}">
+                                                <td colspan="5" class="text-center py-4">No sales data available for this period</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sales over time chart
+            const salesData = /*[[${salesOverTime}]]*/ {};
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(salesData).map(date => {
+                        const dateObj = new Date(date);
+                        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    }),
+                    datasets: [{
+                        label: 'Sales',
+                        data: Object.values(salesData),
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `$${context.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Sales by category chart
+            const categoryData = /*[[${salesByCategory}]]*/ {};
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categoryData).map(category => 
+                        category.charAt(0).toUpperCase() + category.slice(1)
+                    ),
+                    datasets: [{
+                        data: Object.values(categoryData),
+                        backgroundColor: [
+                            '#0d6efd', '#198754', '#6f42c1', '#fd7e14', '#dc3545',
+                            '#0dcaf0', '#ffc107', '#20c997'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Order status chart
+            const statusData = /*[[${orderStatusData.statusCounts}]]*/ {};
+            const statusLabels = Object.keys(statusData).map(status => 
+                status.charAt(0) + status.slice(1).toLowerCase()
+            );
+            const statusCounts = Object.values(statusData);
+            
+            const statusCtx = document.getElementById('orderStatusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusCounts,
+                        backgroundColor: [
+                            '#ffc107', // Pending - yellow
+                            '#0dcaf0', // Processing - blue
+                            '#6f42c1', // Shipped - purple
+                            '#198754', // Delivered - green
+                            '#dc3545'  // Cancelled - red
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

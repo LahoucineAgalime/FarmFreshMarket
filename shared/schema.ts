@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   address: text("address"),
   phone: text("phone"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -69,6 +71,9 @@ export const orders = pgTable("orders", {
   orderDate: timestamp("order_date").defaultNow().notNull(),
   deliveryAddress: text("delivery_address").notNull(),
   paymentStatus: text("payment_status").default('pending').notNull(),
+  paymentIntentId: text("payment_intent_id"),
+  paymentMethodId: text("payment_method_id"),
+  paymentReceiptUrl: text("payment_receipt_url"),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).pick({

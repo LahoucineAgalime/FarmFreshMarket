@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HarvestDirect - Farm to Wholesale Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .hero-section {
+            background: linear-gradient(to right, #57b846, #3ca55c);
+            color: white;
+            padding: 6rem 0;
+        }
+        .feature-icon {
+            background-color: #f8f9fa;
+            color: #57b846;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+        .category-card {
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .category-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">HarvestDirect</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/products">Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About Us</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">Contact</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <div sec:authorize="!isAuthenticated()">
+                        <a href="/auth/login" class="btn btn-outline-light me-2">Login</a>
+                        <a href="/auth/register" class="btn btn-success">Register</a>
+                    </div>
+                    <div sec:authorize="isAuthenticated()" class="d-flex align-items-center">
+                        <a href="/cart" class="btn btn-outline-light position-relative me-3">
+                            <i class="bi bi-cart"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                0
+                                <span class="visually-hidden">items in cart</span>
+                            </span>
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1"></i>
+                                <span sec:authentication="name">Username</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
+                                <li><a class="dropdown-item" href="/orders">My Orders</a></li>
+                                <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form th:action="@{/auth/logout}" method="post">
+                                        <button class="dropdown-item" type="submit">Logout</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">Fresh From Farm to Market</h1>
+                    <p class="fs-5 mb-4">Connect directly with farmers and fishermen to get the freshest products without middlemen. Wholesale buyers can find quality products at better prices.</p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                        <a href="/products" class="btn btn-light btn-lg px-4 me-md-2">Browse Products</a>
+                        <a href="/auth/register" class="btn btn-outline-light btn-lg px-4">Register Now</a>
+                    </div>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block">
+                    <img src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" class="img-fluid rounded-3 shadow" alt="Fresh produce">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-12 mb-5">
+                    <h2 class="fw-bold">Why Choose HarvestDirect?</h2>
+                    <p class="text-muted">A new way to connect farmers, fishermen, and wholesalers</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="feature-icon mx-auto">
+                            <i class="bi bi-currency-dollar"></i>
+                        </div>
+                        <h5>Fair Pricing</h5>
+                        <p class="text-muted">Farmers get better prices for their products by selling directly to wholesalers</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="feature-icon mx-auto">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <h5>Direct Delivery</h5>
+                        <p class="text-muted">Products are delivered straight from farms to your business</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="feature-icon mx-auto">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <h5>Quality Guarantee</h5>
+                        <p class="text-muted">Every product meets our strict quality standards</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Products Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="fw-bold">Featured Products</h2>
+                    <p class="text-muted">Browse our selection of fresh products</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <!-- Product cards will be generated here -->
+                <div class="col-md-4 col-lg-3" th:each="product : ${products}">
+                    <div class="card h-100 shadow-sm">
+                        <img th:src="${product.imageUrl}" class="card-img-top" alt="Product image" 
+                             onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                        <div class="card-body">
+                            <h5 class="card-title" th:text="${product.name}">Product Name</h5>
+                            <p class="card-text text-muted" th:text="${#strings.abbreviate(product.description, 80)}">Product description...</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="fs-5 fw-bold text-success mb-0" th:text="${'$' + product.price + ' / ' + product.unit}">$0.00 / unit</p>
+                                <span class="badge bg-info" th:text="${product.category}">Category</span>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white d-grid">
+                            <a th:href="@{'/products/' + ${product.id}}" class="btn btn-outline-success">View Details</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- If no products, show placeholder -->
+                <div class="col-12 text-center py-5" th:if="${#lists.isEmpty(products)}">
+                    <p class="text-muted">No products available at the moment. Please check back later.</p>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-12 text-center">
+                    <a href="/products" class="btn btn-success btn-lg">View All Products</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="fw-bold">Shop by Category</h2>
+                    <p class="text-muted">Find what you need</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <a href="/products?category=fruits" class="text-decoration-none">
+                        <div class="card category-card shadow-sm">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-apple fs-1 text-success"></i>
+                                </div>
+                                <h5 class="card-title">Fruits</h5>
+                                <p class="card-text text-muted">Fresh seasonal fruits from local farms</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="/products?category=vegetables" class="text-decoration-none">
+                        <div class="card category-card shadow-sm">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-flower1 fs-1 text-success"></i>
+                                </div>
+                                <h5 class="card-title">Vegetables</h5>
+                                <p class="card-text text-muted">Organic and conventional vegetables</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="/products?category=seafood" class="text-decoration-none">
+                        <div class="card category-card shadow-sm">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-water fs-1 text-success"></i>
+                                </div>
+                                <h5 class="card-title">Seafood</h5>
+                                <p class="card-text text-muted">Fresh fish and other seafood products</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-12 text-center">
+                    <h2 class="fw-bold">What Our Users Say</h2>
+                    <p class="text-muted">Hear from our satisfied customers</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="mb-3 text-warning">
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                            </div>
+                            <p class="card-text">"HarvestDirect has transformed how I source produce for my restaurant. The quality is exceptional, and I love supporting local farmers directly."</p>
+                            <div class="d-flex align-items-center mt-3">
+                                <div class="flex-shrink-0">
+                                    <img src="https://randomuser.me/api/portraits/women/45.jpg" alt="Customer" class="rounded-circle" width="50" height="50">
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">Maria Johnson</h6>
+                                    <small class="text-muted">Restaurant Owner</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="mb-3 text-warning">
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                            </div>
+                            <p class="card-text">"As a farmer, I can finally get fair prices for my produce. The platform is easy to use, and I've built great relationships with wholesalers."</p>
+                            <div class="d-flex align-items-center mt-3">
+                                <div class="flex-shrink-0">
+                                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Customer" class="rounded-circle" width="50" height="50">
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">James Wilson</h6>
+                                    <small class="text-muted">Organic Farmer</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="mb-3 text-warning">
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-fill"></i>
+                                <i class="bi bi-star-half"></i>
+                            </div>
+                            <p class="card-text">"The seafood I get through HarvestDirect is so fresh! My customers can taste the difference, and my business has grown since I started sourcing here."</p>
+                            <div class="d-flex align-items-center mt-3">
+                                <div class="flex-shrink-0">
+                                    <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Customer" class="rounded-circle" width="50" height="50">
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">Lisa Chen</h6>
+                                    <small class="text-muted">Market Owner</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-5 bg-success text-white">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8 text-center text-lg-start">
+                    <h2 class="fw-bold">Ready to transform your business?</h2>
+                    <p class="lead">Join HarvestDirect today and experience the benefits of direct farm-to-market connections.</p>
+                </div>
+                <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+                    <a href="/auth/register" class="btn btn-light btn-lg">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5>HarvestDirect</h5>
+                    <p>Connecting farmers and fishermen directly with wholesalers, eliminating middlemen and creating a more efficient marketplace.</p>
+                    <div class="d-flex gap-3 mt-4">
+                        <a href="#" class="text-white"><i class="bi bi-facebook fs-4"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-twitter fs-4"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-instagram fs-4"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-linkedin fs-4"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <h5>Links</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/" class="text-decoration-none text-white-50">Home</a></li>
+                        <li class="mb-2"><a href="/products" class="text-decoration-none text-white-50">Products</a></li>
+                        <li class="mb-2"><a href="/about" class="text-decoration-none text-white-50">About Us</a></li>
+                        <li class="mb-2"><a href="/contact" class="text-decoration-none text-white-50">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <h5>Categories</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/products?category=fruits" class="text-decoration-none text-white-50">Fruits</a></li>
+                        <li class="mb-2"><a href="/products?category=vegetables" class="text-decoration-none text-white-50">Vegetables</a></li>
+                        <li class="mb-2"><a href="/products?category=seafood" class="text-decoration-none text-white-50">Seafood</a></li>
+                        <li class="mb-2"><a href="/products?category=dairy" class="text-decoration-none text-white-50">Dairy</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-md-4">
+                    <h5>Contact Us</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-geo-alt me-2"></i> 123 Market Street, Farm City</li>
+                        <li class="mb-2"><i class="bi bi-telephone me-2"></i> (123) 456-7890</li>
+                        <li class="mb-2"><i class="bi bi-envelope me-2"></i> info@harvestdirect.com</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0">&copy; 2025 HarvestDirect. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-0">
+                        <a href="/terms" class="text-white-50 text-decoration-none me-3">Terms of Service</a>
+                        <a href="/privacy" class="text-white-50 text-decoration-none">Privacy Policy</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

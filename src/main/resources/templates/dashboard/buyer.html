@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Dashboard - HarvestDirect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+        }
+        .card-stats {
+            border-left: 4px solid;
+        }
+        .card-stats-orders {
+            border-left-color: #0d6efd;
+        }
+        .card-stats-spending {
+            border-left-color: #198754;
+        }
+        .card-stats-cart {
+            border-left-color: #6f42c1;
+        }
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .product-card {
+            transition: transform 0.3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">HarvestDirect</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/products">Products</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a href="/cart" class="btn btn-outline-light position-relative me-3">
+                        <i class="bi bi-cart"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            0
+                            <span class="visually-hidden">items in cart</span>
+                        </span>
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span sec:authentication="name">Username</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form th:action="@{/auth/logout}" method="post">
+                                    <button class="dropdown-item" type="submit">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/products">
+                                <i class="bi bi-box me-2"></i> Browse Products
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/cart">
+                                <i class="bi bi-cart me-2"></i> Shopping Cart
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/orders">
+                                <i class="bi bi-bag me-2"></i> My Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/settings">
+                                <i class="bi bi-gear me-2"></i> Settings
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                    <div class="btn-group me-2">
+                        <a href="/products" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-box"></i> Browse Products
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Welcome Alert -->
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <h4 class="alert-heading">Welcome <span th:text="${user.name}">Buyer</span>!</h4>
+                    <p>This is your dashboard where you can track your orders, browse products, and manage your account.</p>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card card-stats card-stats-orders">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Total Orders</h5>
+                                        <h2 class="fw-bold mb-2" th:text="${orders.size()}">0</h2>
+                                        <p class="mb-0 text-muted"><span class="text-success me-2"><i class="bi bi-arrow-up"></i> 5%</span> Since last month</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box bg-primary-subtle text-primary">
+                                            <i class="bi bi-bag"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card card-stats card-stats-spending">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Total Spending</h5>
+                                        <h2 class="fw-bold mb-2">$0.00</h2>
+                                        <p class="mb-0 text-muted"><span class="text-success me-2"><i class="bi bi-arrow-up"></i> 12%</span> Since last month</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box bg-success-subtle text-success">
+                                            <i class="bi bi-currency-dollar"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card card-stats card-stats-cart">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title text-muted mb-0">Cart Items</h5>
+                                        <h2 class="fw-bold mb-2">0</h2>
+                                        <p class="mb-0 text-muted">
+                                            <a href="/cart" class="text-decoration-none">View Cart</a>
+                                        </p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <div class="icon-box" style="background-color: #f3effd; color: #6f42c1;">
+                                            <i class="bi bi-cart"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Orders</h5>
+                        <a href="/orders" class="btn btn-sm btn-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Seller</th>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="order, stat : ${orders}" th:if="${stat.index < 5}">
+                                        <td th:text="${'#' + order.id}">Order ID</td>
+                                        <td th:text="${order.seller.name}">Seller</td>
+                                        <td th:text="${#dates.format(order.orderDate, 'MMM dd, yyyy')}">Date</td>
+                                        <td th:text="${'$' + order.totalAmount}">Amount</td>
+                                        <td>
+                                            <span th:if="${order.status.name() == 'PENDING'}" class="badge bg-warning">Pending</span>
+                                            <span th:if="${order.status.name() == 'PROCESSING'}" class="badge bg-info">Processing</span>
+                                            <span th:if="${order.status.name() == 'SHIPPED'}" class="badge bg-primary">Shipped</span>
+                                            <span th:if="${order.status.name() == 'DELIVERED'}" class="badge bg-success">Delivered</span>
+                                            <span th:if="${order.status.name() == 'CANCELLED'}" class="badge bg-danger">Cancelled</span>
+                                        </td>
+                                        <td>
+                                            <a th:href="@{'/orders/' + ${order.id}}" class="btn btn-sm btn-outline-primary">
+                                                View Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr th:if="${orders.empty}">
+                                        <td colspan="6" class="text-center py-4">
+                                            <p class="mb-2">You have no orders yet</p>
+                                            <a href="/products" class="btn btn-sm btn-primary">Browse Products</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommended Products -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Recommended Products</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <!-- Static product examples -->
+                            <div class="col-md-6 col-lg-3">
+                                <div class="card product-card h-100 shadow-sm">
+                                    <img src="https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a" class="card-img-top" alt="Organic Apples">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Organic Apples</h5>
+                                        <p class="card-text text-muted">Fresh organic apples harvested yesterday</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="fs-5 fw-bold text-success mb-0">$2.99 / kg</p>
+                                            <span class="badge bg-info">fruits</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white d-grid">
+                                        <a href="/products/1" class="btn btn-outline-success">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-3">
+                                <div class="card product-card h-100 shadow-sm">
+                                    <img src="https://images.unsplash.com/photo-1590868309235-58c33a8f7d5b" class="card-img-top" alt="Fresh Carrots">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Fresh Carrots</h5>
+                                        <p class="card-text text-muted">Locally grown carrots, perfect for salads and cooking</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="fs-5 fw-bold text-success mb-0">$1.99 / kg</p>
+                                            <span class="badge bg-info">vegetables</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white d-grid">
+                                        <a href="/products/2" class="btn btn-outline-success">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-3">
+                                <div class="card product-card h-100 shadow-sm">
+                                    <img src="https://images.unsplash.com/photo-1574781330855-d0db8cc6a79c" class="card-img-top" alt="Fresh Salmon">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Fresh Salmon</h5>
+                                        <p class="card-text text-muted">Wild-caught salmon, rich in omega-3</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="fs-5 fw-bold text-success mb-0">$12.99 / kg</p>
+                                            <span class="badge bg-info">seafood</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white d-grid">
+                                        <a href="/products/3" class="btn btn-outline-success">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-3">
+                                <div class="card product-card h-100 shadow-sm">
+                                    <img src="https://images.unsplash.com/photo-1565680018160-d349ffe6fffa" class="card-img-top" alt="Jumbo Shrimp">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Jumbo Shrimp</h5>
+                                        <p class="card-text text-muted">Fresh jumbo shrimp caught daily</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="fs-5 fw-bold text-success mb-0">$15.99 / kg</p>
+                                            <span class="badge bg-info">seafood</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white d-grid">
+                                        <a href="/products/4" class="btn btn-outline-success">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="/products" class="btn btn-primary">Browse All Products</a>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Shop by Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <a href="/products?category=fruits" class="text-decoration-none">
+                                    <div class="card product-card shadow-sm">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-apple fs-1 text-success"></i>
+                                            </div>
+                                            <h5 class="card-title">Fruits</h5>
+                                            <p class="card-text text-muted">Fresh seasonal fruits from local farms</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="/products?category=vegetables" class="text-decoration-none">
+                                    <div class="card product-card shadow-sm">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-flower1 fs-1 text-success"></i>
+                                            </div>
+                                            <h5 class="card-title">Vegetables</h5>
+                                            <p class="card-text text-muted">Organic and conventional vegetables</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="/products?category=seafood" class="text-decoration-none">
+                                    <div class="card product-card shadow-sm">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-water fs-1 text-success"></i>
+                                            </div>
+                                            <h5 class="card-title">Seafood</h5>
+                                            <p class="card-text text-muted">Fresh fish and other seafood products</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -11,6 +11,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
+  updateStripeCustomerId(userId: number, stripeCustomerId: string): Promise<User | undefined>;
+  updateUserStripeInfo(userId: number, stripeInfo: { stripeCustomerId: string, stripeSubscriptionId?: string }): Promise<User | undefined>;
   
   // Product methods
   getProduct(id: number): Promise<Product | undefined>;
@@ -28,6 +30,12 @@ export interface IStorage {
   getOrdersBySeller(sellerId: number): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
+  updateOrderPaymentInfo(id: number, paymentInfo: { 
+    paymentIntentId?: string, 
+    paymentMethodId?: string, 
+    paymentReceiptUrl?: string,
+    paymentStatus?: string 
+  }): Promise<Order | undefined>;
   
   // Order Item methods
   getOrderItems(orderId: number): Promise<OrderItem[]>;
