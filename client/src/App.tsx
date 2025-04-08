@@ -10,6 +10,8 @@ import OrdersPage from "@/pages/orders-page";
 import CustomersPage from "@/pages/customers-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import SettingsPage from "@/pages/settings-page";
+import CheckoutPage from "@/pages/checkout-page";
+import CheckoutSuccessPage from "@/pages/checkout-success-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 
@@ -23,6 +25,8 @@ function Router() {
       <ProtectedRoute path="/customers" component={CustomersPage} />
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/checkout" component={CheckoutPage} />
+      <ProtectedRoute path="/checkout/success" component={CheckoutSuccessPage} />
       <Route component={NotFound} />
     </Switch>
   );

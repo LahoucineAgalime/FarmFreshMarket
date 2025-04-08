@@ -105,6 +105,24 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values());
   }
 
+  async updateStripeCustomerId(userId: number, stripeCustomerId: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    const updatedUser = { ...user, stripeCustomerId };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserStripeInfo(userId: number, stripeInfo: { stripeCustomerId: string, stripeSubscriptionId?: string }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    const updatedUser = { ...user, ...stripeInfo };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
   // Product methods
   async getProduct(id: number): Promise<Product | undefined> {
     return this.products.get(id);
@@ -192,6 +210,20 @@ export class MemStorage implements IStorage {
     if (!order) return undefined;
 
     const updatedOrder = { ...order, status };
+    this.orders.set(id, updatedOrder);
+    return updatedOrder;
+  }
+  
+  async updateOrderPaymentInfo(id: number, paymentInfo: { 
+    paymentIntentId?: string, 
+    paymentMethodId?: string, 
+    paymentReceiptUrl?: string,
+    paymentStatus?: string 
+  }): Promise<Order | undefined> {
+    const order = this.orders.get(id);
+    if (!order) return undefined;
+
+    const updatedOrder = { ...order, ...paymentInfo };
     this.orders.set(id, updatedOrder);
     return updatedOrder;
   }

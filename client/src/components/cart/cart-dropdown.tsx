@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ShoppingCart, Trash2, X } from "lucide-react";
+import { useLocation } from "wouter";
+import { ShoppingCart, Trash2, X, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -32,6 +33,81 @@ type CartItemWithProduct = {
 const checkoutSchema = z.object({
   deliveryAddress: z.string().min(5, "Delivery address is required"),
 });
+
+// Pay with Stripe button component
+function PayWithStripeButton({ 
+  form, 
+  onClose 
+}: { 
+  form: UseFormReturn<z.infer<typeof checkoutSchema>>, 
+  onClose: () => void 
+}) {
+  const { toast } = useToast();
+  const [isPending, setIsPending] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const handleStripeCheckout = async () => {
+    // Validate the form first
+    const valid = await form.trigger();
+    if (!valid) {
+      return; // Form has validation errors
+    }
+
+    const deliveryAddress = form.getValues().deliveryAddress;
+    
+    setIsPending(true);
+    
+    try {
+      // Create the order first
+      const ordersResponse = await apiRequest("POST", "/api/orders", { 
+        deliveryAddress 
+      });
+      
+      if (!ordersResponse.ok) {
+        throw new Error("Failed to create order");
+      }
+      
+      const orders = await ordersResponse.json();
+      
+      // Get the first order (there might be multiple if items are from different sellers)
+      const order = Array.isArray(orders) ? orders[0] : orders;
+      
+      if (!order || !order.id) {
+        throw new Error("Failed to create order");
+      }
+      
+      // Navigate to the stripe checkout page
+      setLocation(`/checkout?orderId=${order.id}`);
+      onClose();
+      
+      // Clear the cart and reset the form
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      form.reset();
+      
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create order",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <Button 
+      type="button" 
+      variant="outline" 
+      className="w-full" 
+      onClick={handleStripeCheckout}
+      disabled={isPending}
+    >
+      <CreditCard className="mr-2 h-4 w-4" />
+      {isPending ? "Processing..." : "Pay with Stripe"}
+    </Button>
+  );
+}
 
 export default function CartDropdown() {
   const { toast } = useToast();
@@ -275,16 +351,19 @@ export default function CartDropdown() {
                 </div>
               </div>
               
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={placeOrderMutation.isPending}
-                >
-                  {placeOrderMutation.isPending ? "Processing..." : "Place Order"}
-                </Button>
+              <DialogFooter className="flex-col space-y-2 sm:space-y-0">
+                <div className="flex space-x-2">
+                  <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={placeOrderMutation.isPending}
+                  >
+                    {placeOrderMutation.isPending ? "Processing..." : "Place Order"}
+                  </Button>
+                </div>
+                <PayWithStripeButton form={form} onClose={() => setIsCheckoutOpen(false)} />
               </DialogFooter>
             </form>
           </Form>

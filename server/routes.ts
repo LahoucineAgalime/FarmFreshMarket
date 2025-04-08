@@ -6,6 +6,7 @@ import { insertProductSchema, insertCartItemSchema, insertOrderSchema, insertOrd
 import { z } from "zod";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { stripeService } from "./stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -541,6 +542,282 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Admin created", id: admin.id });
     } catch (error) {
       res.status(500).json({ error: "Failed to create admin" });
+    }
+  });
+
+  // Stripe Payment Routes
+  app.post("/api/stripe/create-customer", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      // Check if user already has a Stripe customer ID
+      if (req.user!.stripeCustomerId) {
+        return res.status(400).json({ error: "User already has a Stripe customer" });
+      }
+
+      // Create Stripe customer
+      const stripeCustomerId = await stripeService.createCustomer(req.user!);
+      
+      // Update user with Stripe customer ID
+      const updatedUser = await storage.updateStripeCustomerId(req.user!.id, stripeCustomerId);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ error: "Failed to update user with Stripe customer ID" });
+      }
+      
+      // Return updated user (without password)
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating Stripe customer:", error);
+      res.status(500).json({ error: "Failed to create Stripe customer" });
+    }
+  });
+
+  app.post("/api/stripe/create-payment-intent", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const { orderId } = req.body;
+      
+      if (!orderId) {
+        return res.status(400).json({ error: "Order ID is required" });
+      }
+      
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Ensure user is the buyer
+      if (order.buyerId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only pay for your own orders" });
+      }
+      
+      // Check if order is already paid
+      if (order.paymentStatus === "paid") {
+        return res.status(400).json({ error: "Order is already paid" });
+      }
+      
+      // Create or retrieve Stripe customer
+      let customerId = req.user!.stripeCustomerId;
+      if (!customerId) {
+        customerId = await stripeService.createCustomer(req.user!);
+        await storage.updateStripeCustomerId(req.user!.id, customerId);
+      }
+      
+      // Create a payment intent
+      const paymentIntent = await stripeService.createPaymentIntent(
+        parseFloat(order.totalAmount.toString()),
+        customerId,
+        { orderId: order.id.toString() }
+      );
+      
+      // Update order with payment intent ID
+      await storage.updateOrderPaymentInfo(order.id, { 
+        paymentIntentId: paymentIntent.id 
+      });
+      
+      // Return the client secret
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id
+      });
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ error: "Failed to create payment intent" });
+    }
+  });
+
+  app.post("/api/stripe/payment-successful", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const { paymentIntentId, paymentMethodId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ error: "Payment intent ID is required" });
+      }
+      
+      // Get payment intent
+      const paymentIntent = await stripeService.retrievePaymentIntent(paymentIntentId);
+      
+      // Check that payment intent is succeeded
+      if (paymentIntent.status !== "succeeded") {
+        return res.status(400).json({ error: "Payment not successful" });
+      }
+      
+      // Get order ID from metadata
+      const orderId = paymentIntent.metadata?.orderId;
+      if (!orderId) {
+        return res.status(500).json({ error: "Order ID not found in payment intent metadata" });
+      }
+      
+      // Get order
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Ensure user is the buyer
+      if (order.buyerId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only handle payments for your own orders" });
+      }
+      
+      // Update order payment status
+      const updatedOrder = await storage.updateOrderPaymentInfo(order.id, {
+        paymentStatus: "paid",
+        paymentMethodId: paymentMethodId,
+        paymentReceiptUrl: paymentIntent.charges.data[0]?.receipt_url || null
+      });
+      
+      // Update order status if it's still pending
+      if (order.status === "pending") {
+        await storage.updateOrderStatus(order.id, "processing");
+      }
+      
+      res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error("Error handling successful payment:", error);
+      res.status(500).json({ error: "Failed to process successful payment" });
+    }
+  });
+
+  app.get("/api/stripe/payment-methods", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const customerId = req.user!.stripeCustomerId;
+      
+      if (!customerId) {
+        return res.json([]);
+      }
+      
+      const paymentMethods = await stripeService.listPaymentMethods(customerId);
+      res.json(paymentMethods);
+    } catch (error) {
+      console.error("Error listing payment methods:", error);
+      res.status(500).json({ error: "Failed to list payment methods" });
+    }
+  });
+
+  app.post("/api/stripe/attach-payment-method", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const { paymentMethodId } = req.body;
+      
+      if (!paymentMethodId) {
+        return res.status(400).json({ error: "Payment method ID is required" });
+      }
+      
+      // Get or create customer
+      let customerId = req.user!.stripeCustomerId;
+      if (!customerId) {
+        customerId = await stripeService.createCustomer(req.user!);
+        await storage.updateStripeCustomerId(req.user!.id, customerId);
+      }
+      
+      const paymentMethod = await stripeService.attachPaymentMethod(paymentMethodId, customerId);
+      res.json(paymentMethod);
+    } catch (error) {
+      console.error("Error attaching payment method:", error);
+      res.status(500).json({ error: "Failed to attach payment method" });
+    }
+  });
+
+  app.post("/api/stripe/detach-payment-method", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const { paymentMethodId } = req.body;
+      
+      if (!paymentMethodId) {
+        return res.status(400).json({ error: "Payment method ID is required" });
+      }
+      
+      const paymentMethod = await stripeService.detachPaymentMethod(paymentMethodId);
+      res.json(paymentMethod);
+    } catch (error) {
+      console.error("Error detaching payment method:", error);
+      res.status(500).json({ error: "Failed to detach payment method" });
+    }
+  });
+
+  // Set up Stripe webhook to receive events
+  app.post("/api/stripe/webhook", async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    
+    if (!process.env.STRIPE_WEBHOOK_SECRET || !sig) {
+      return res.status(400).json({ error: "Stripe webhook signature or secret missing" });
+    }
+    
+    try {
+      const event = stripeService.constructEventFromPayload(
+        req.body.toString(),
+        sig as string,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+      
+      // Handle the event
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object as any;
+          const orderId = paymentIntent.metadata?.orderId;
+          
+          if (orderId) {
+            const order = await storage.getOrder(parseInt(orderId));
+            if (order) {
+              await storage.updateOrderPaymentInfo(order.id, {
+                paymentStatus: "paid",
+                paymentReceiptUrl: paymentIntent.charges?.data[0]?.receipt_url
+              });
+              
+              // Update order status if it's still pending
+              if (order.status === "pending") {
+                await storage.updateOrderStatus(order.id, "processing");
+              }
+            }
+          }
+          break;
+          
+        case 'payment_intent.payment_failed':
+          // Handle failed payment
+          const failedPayment = event.data.object as any;
+          const failedOrderId = failedPayment.metadata?.orderId;
+          
+          if (failedOrderId) {
+            const order = await storage.getOrder(parseInt(failedOrderId));
+            if (order) {
+              await storage.updateOrderPaymentInfo(order.id, {
+                paymentStatus: "failed"
+              });
+            }
+          }
+          break;
+          
+        // ... handle other event types as needed
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+      
+      // Return a response to acknowledge receipt of the event
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Webhook error:', error);
+      res.status(400).json({ error: "Webhook signature verification failed" });
     }
   });
 
